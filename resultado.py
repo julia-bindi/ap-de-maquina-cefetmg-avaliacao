@@ -1,3 +1,4 @@
+from pandas.core.frame import DataFrame
 from sklearn.exceptions import UndefinedMetricWarning
 import optuna
 import numpy as np
@@ -114,7 +115,8 @@ class Resultado():
         #Atividade 1: substitua o none...lembre-se que já foi calculado o
         #f1 por classe no atributo calculado correspondente.
         #Lembre-se de como usar atributos calculados.
-        return None
+        f1s = self.f1_por_classe.values()
+        return sum(f1s)/len(f1s)
 
     @property
     def acuracia(self):
@@ -122,9 +124,10 @@ class Resultado():
         num_previstos_corretamente = 0
         for classe in range(len(self.mat_confusao)):
             #Atividade 1: complete o código abaixo, substituindo o None
-            num_previstos_corretamente += None
+            num_previstos_corretamente += self.mat_confusao[classe][classe]
 
         return num_previstos_corretamente/len(self.y)
+
 class Fold():
     def __init__(self,df_treino :pd.DataFrame,  df_data_to_predict:pd.DataFrame,
                 col_classe:str,num_folds_validacao:int=0,num_repeticoes_validacao:int=0):
@@ -137,8 +140,9 @@ class Fold():
             self.arr_folds_validacao = self.gerar_k_folds(df_treino,num_folds_validacao,col_classe,num_repeticoes_validacao)
         else:
             self.arr_folds_validacao = []
+
     @staticmethod
-    def gerar_k_folds(df_dados,val_k:int,col_classe:str,num_repeticoes:int=1,seed:int=1,
+    def gerar_k_folds(df_dados:DataFrame,val_k:int,col_classe:str,num_repeticoes:int=1,seed:int=1,
                     num_folds_validacao:int=0,num_repeticoes_validacao:int=1) -> List["Fold"]:
         """
         Implementar esta função de acordo com os comentários no código
@@ -151,17 +155,15 @@ class Fold():
         """
         #1. especifique o número de instancias da partição teste de cada fold usando
         #...o parametro val_k
-        num_instances_per_partition = None
+        num_instances_per_partition = int(len(df_dados.index)/val_k)
         #folds de saida
         arr_folds = []
-
-
 
         for num_repeticao in range(num_repeticoes):
             #2. Embaralhe os dados: para isso, use o método sample para fazer uma amostra aleatória usando 100% dos dados. Use a seed passada como parametro
             #lembre-se que, para cada repetição, deve-se haver uma seed diferente
             #para isso, use seed+num_repeticao
-            df_dados_rand = None
+            df_dados_rand = df_dados.sample(frac=1,random_state=seed+num_repeticao)
 
             #Impressão dos ids dos dados (exiba o print para testes)
             #print("Dados: "+str(df_dados_rand.index.values))
@@ -170,24 +172,24 @@ class Fold():
             for num_fold in range(val_k):
                 #2. especifique o inicio e fim do fold de teste. Caso seja o ultimo, o fim será o tamanho do vetor.
                 #Use num_instances_per_partition e num_fold para deliminar o inicio e fim do teste
-                ini_fold_to_predict = None
+                ini_fold_to_predict = num_instances_per_partition*num_fold
                 if num_fold < val_k-1:
-                    fim_fold_to_predict = None
+                    fim_fold_to_predict = ini_fold_to_predict+num_instances_per_partition
                 else:
-                    fim_fold_to_predict = None
+                    fim_fold_to_predict = int(len(df_dados_rand.index))
 
                 #print(f"Inicio: {ini_fold_to_predict} -  Fim: {fim_fold_to_predict}")
                 #3. por meio do df_dados_rand, obtenha os dados de avaliação (teste ou validação)
-                df_to_predict = None
+                df_to_predict = df_dados_rand[ini_fold_to_predict:fim_fold_to_predict]
                 #print(df_to_predict)
 
                 #4. Crie o treino por meio dos dados originais (df_dados_rand),
                 #removendo os dados que serão avaliados  (df_to_predict)
-                df_treino = None
+                df_treino = df_dados_rand.drop(index=df_to_predict.index)
                 #print(df_treino)
 
                 #5. Crie o fold (objeto da classe Fold) para adicioná-lo no vetor
-                fold = None
+                fold = Fold(df_treino=df_treino, df_data_to_predict=df_to_predict, col_classe=col_classe)
                 arr_folds.append(fold)
 
 
