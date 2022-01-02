@@ -20,7 +20,7 @@ class Experimento():
         ClasseObjetivoOtimizacao: CLASSE a ser usada para otimização dos parametros
         """
         self.folds = folds
-        self._resultados = None
+        self._resultados = []
         self.ml_method = ml_method
         self.ClasseObjetivoOtimizacao = ClasseObjetivoOtimizacao
         self.num_trials = num_trials
@@ -49,13 +49,13 @@ class Experimento():
             ##1. Caso haja um metodo de otimizacao, obtenha o melhor metodo com ele
             #substitua os none quando necessario
             if(self.ClasseObjetivoOtimizacao is not None):
-                study = None
+                study = optuna.create_study(direction='maximize', sampler=self.sampler)
                 objetivo_otimizacao = self.ClasseObjetivoOtimizacao(fold)
-                study.optimize(None, None)
+                study.optimize(objetivo_otimizacao, n_trials=self.num_trials)
 
                 #1.(a) obtem o melhor metodo da otimização
                 #  . use o vetor arr_evaluated_methods e o número do best_trial (study.best_trial.number)
-                best_method = None
+                best_method = objetivo_otimizacao.arr_evaluated_methods[study.best_trial.number]
                 self.studies_per_fold.append(study)
             else:
                 #caso contrario, o metodo, atributo da classe Experimento (sem modificações) é usado
@@ -63,7 +63,7 @@ class Experimento():
 
             ##2. Efetua a predição nos valores de teste (fold.df_data_to_predict)
             #logo após, adiciona em resultados o resultado predito (objeto da classe Resultado) usando o melhor metodo
-            resultado = None
+            resultado = best_method.eval(fold.df_treino, fold.df_data_to_predict, fold.col_classe)
             self._resultados.append(resultado)
         return self._resultados
 
@@ -72,13 +72,13 @@ class Experimento():
         """
         Calcula a média do f1 dos resultados.
         """
-        return None
+        return np.average([resultado.macro_f1 for resultado in self.resultados])
     @property
     def acuracia(self) -> float:
         """
         Calcula a acuracia dos resultados.
         """
-        return None
+        return np.average([resultado.acuracia for resultado in self.resultados])
 
 
 
